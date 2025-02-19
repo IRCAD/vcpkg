@@ -84,10 +84,25 @@ if(NOT _VCPKG_WINDOWS_TOOLCHAIN)
     endif()
     set(CMAKE_RC_FLAGS "/c65001 /DWIN32" CACHE STRING "")
 
-    set(CMAKE_CXX_FLAGS_DEBUG "${VCPKG_CRT_LINK_FLAG_PREFIX}d /Z7 /Ob0 /Od /RTC1 ${VCPKG_CXX_FLAGS_DEBUG}" CACHE STRING "")
-    set(CMAKE_C_FLAGS_DEBUG "${VCPKG_CRT_LINK_FLAG_PREFIX}d /Z7 /Ob0 /Od /RTC1 ${VCPKG_C_FLAGS_DEBUG}" CACHE STRING "")
+    set(CMAKE_CXX_FLAGS_DEBUG "${VCPKG_CRT_LINK_FLAG_PREFIX}d /Z7 ${VCPKG_CXX_FLAGS_DEBUG} /O2" CACHE STRING "")
+    set(CMAKE_C_FLAGS_DEBUG "${VCPKG_CRT_LINK_FLAG_PREFIX}d /Z7 ${VCPKG_C_FLAGS_DEBUG} /O2" CACHE STRING "")
     set(CMAKE_CXX_FLAGS_RELEASE "${VCPKG_CRT_LINK_FLAG_PREFIX} /O2 /Oi /Gy /DNDEBUG /Z7 ${VCPKG_CXX_FLAGS_RELEASE}" CACHE STRING "")
     set(CMAKE_C_FLAGS_RELEASE "${VCPKG_CRT_LINK_FLAG_PREFIX} /O2 /Oi /Gy /DNDEBUG /Z7 ${VCPKG_C_FLAGS_RELEASE}" CACHE STRING "")
+
+    # --- sight patch: /O2 in Debug clashes with CMake's default /RTC1 runtime checks -> hard D8016 error
+    # CMP0184 + CMAKE_MSVC_RUNTIME_CHECKS is the documented way to turn those checks off everywhere
+    if(POLICY CMP0184)
+        cmake_policy(SET CMP0184 NEW)
+    endif()
+    set(CMAKE_MSVC_RUNTIME_CHECKS "" CACHE STRING "")
+    # ---------------------------------------------------------------------------
+
+    # --- sight patch: CUDA 13's CCCL headers need /Zc:preprocessor and C++20 nvcc calls cl.exe as its host compiler.
+    # CMAKE_CUDA_STANDARD is the CMake-native mechanism that correctly translates to both sides (cl.exe and nvcc).
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler /Zc:preprocessor" CACHE STRING "")
+    set(CMAKE_CUDA_STANDARD 20 CACHE STRING "")
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON CACHE BOOL "")
+    # ---------------------------------------------------------------------------
 
     string(APPEND CMAKE_STATIC_LINKER_FLAGS_RELEASE_INIT " /nologo ")
     set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "/nologo /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF ${VCPKG_LINKER_FLAGS} ${VCPKG_LINKER_FLAGS_RELEASE}" CACHE STRING "")
